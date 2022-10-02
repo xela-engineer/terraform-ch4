@@ -11,6 +11,8 @@ resource "aws_db_instance" "example" {
   db_name             = "example_database"
 
   # How should we set the username and password?
+  # export TF_VAR_db_username=alex
+  # export TF_VAR_db_password=
   username = var.db_username
   password = var.db_password
 }

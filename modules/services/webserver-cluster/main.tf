@@ -16,7 +16,7 @@ data "aws_subnets" "default" {
 # Part : security group
 
 resource "aws_security_group" "instance" {
-  name = "terraform-example-instance"
+  name = "${var.cluster_name}-instance"
   # Allow ec2 instance to receive traffic on port 8080
   ingress {
     from_port = var.server_port
@@ -28,10 +28,10 @@ resource "aws_security_group" "instance" {
 
 resource "aws_launch_configuration" "example" {
   image_id        = "ami-0fb653ca2d3203ac1"
-  instance_type   = "t2.micro"
+  instance_type   = var.instance_type
   security_groups = [aws_security_group.instance.id]
 
-  user_data = templatefile("user-data.sh", {
+  user_data = templatefile("${path.module}/user-data.sh", {
     server_port = var.server_port
     db_address  = data.terraform_remote_state.db.outputs.address
     db_port     = data.terraform_remote_state.db.outputs.port
@@ -48,20 +48,20 @@ resource "aws_autoscaling_group" "example" {
   target_group_arns = [aws_lb_target_group.asg.arn]
   health_check_type = "ELB"
 
-  min_size = 2
-  max_size = 10
+  min_size = var.min_size
+  max_size = var.max_size
   desired_capacity = 3
 
   tag {
     key = "name"
-    value = "terraform-asg-example"
+    value = "${var.cluster_name}-asg-example"
     propagate_at_launch = true
   }
 }
 
 
 resource "aws_lb" "example" {     # create ALB
-  name               = "terraform-asg-example"
+  name               = "${var.cluster_name}-asg-example"
   load_balancer_type = "application"
   subnets            = data.aws_subnets.default.ids
   security_groups = [aws_security_group.alb.id]
@@ -82,7 +82,7 @@ resource "aws_lb_listener" "http" {
   }
 }
 resource "aws_security_group" "alb" {
-  name = "terraform-example-alb"
+  name = "${var.cluster_name}-alb"
   # Allow inbound HTTP requests
   ingress {
     from_port = 80
@@ -100,7 +100,7 @@ resource "aws_security_group" "alb" {
 }
 
 resource "aws_lb_target_group" "asg" {
-  name = "terraform-asg-example"
+  name = "${var.cluster_name}-asg-example"
   port = var.server_port
   protocol = "HTTP"
   vpc_id = data.aws_vpc.default.id
@@ -141,8 +141,10 @@ data "terraform_remote_state" "db" {
   backend = "s3"
 
   config = {
-    bucket = "terraform-up-and-running-state-collection"
-    key    = "stage/data-stores/mysql/terraform.tfstate"
+    #bucket = "terraform-up-and-running-state-collection"
+    #key    = "stage/data-stores/mysql/terraform.tfstate"
+    bucket = var.db_remote_state_bucket
+    key    = var.db_remote_state_key
     region = "us-east-2"
   }
 }
