@@ -33,8 +33,8 @@ resource "aws_launch_configuration" "example" {
 
   user_data = templatefile("${path.module}/user-data.sh", {
     server_port = var.server_port
-    db_address  = data.terraform_remote_state.db.outputs.address
-    db_port     = data.terraform_remote_state.db.outputs.port
+    db_address  = data.terraform_remote_state.db.outputs.db_module_output.address
+    db_port     = data.terraform_remote_state.db.outputs.db_module_output.port
   })
   lifecycle {
     create_before_destroy = true
@@ -132,10 +132,6 @@ resource "aws_lb_listener_rule" "asg" {
   }
 }
 
-output "alb_dns_name" {
-  value       = aws_lb.example.dns_name
-  description = "The alb dns name"
-} 
 
 data "terraform_remote_state" "db" {
   backend = "s3"
